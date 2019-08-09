@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!-- 加载数据库配置信息 -->
+    <!--<context:property-placeholder location="classpath:db.properties"/>-->
+
+    <!-- 连接池对象 -->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"
+          init-method="init" destroy-method="close">
+        <property name="driverClassName" value="${driver}"/>
+        <property name="username" value="${username}"/>
+        <property name="url" value="${url}"/>
+        <property name="password" value="${password}"/>
+    </bean>
+
+    <!-- 配置SessionFactory -->
+    <bean id="sessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 1:连接池 -->
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 2:读取MyBatis总配置文件 -->
+        <property name="configLocation" value="classpath:mybatis-config.xml"/>
+        <!-- 3:配置别名扫描 -->
+        <property name="typeAliasesPackage" value="org.test.**.entity"/>
+        <!-- 4:加载mapper文件 -->
+        <property name="mapperLocations" value="classpath:mapper/**/*Mapper.xml"/>
+    </bean>
+
+    <!--自动扫描 将Mapper接口生成代理注入到Spring-->
+    <bean id="mapperScannerConfigurer" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="org.test.**.mapper"/>
+    </bean>
+
+    <!-- 事务管理器 -->
+    <!-- 对mybatis操作数据事务控制，spring使用jdbc的事务控制类 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!-- 数据源dataSource在spring-dao.xml中配置了 -->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- 通知 -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="save*" propagation="REQUIRED"/>
+            <tx:method name="delete*" propagation="REQUIRED"/>
+            <tx:method name="update*" propagation="REQUIRED"/>
+            <tx:method name="insert*" propagation="REQUIRED"/>
+            <tx:method name="find*" propagation="SUPPORTS" read-only="true"/>
+            <tx:method name="get*" propagation="SUPPORTS" read-only="true"/>
+            <tx:method name="select*" propagation="SUPPORTS" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <aop:config>
+        <!-- 包里面的所有类，所有方法，任何参数 -->
+        <aop:advisor advice-ref="txAdvice" pointcut="execution(* org.test.*.service.*.*(..))"/>
+    </aop:config>
+
+</beans>
